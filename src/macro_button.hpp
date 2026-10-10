@@ -26,7 +26,7 @@ protected:
         float opacity = static_cast<float>(Mod::get()->getSettingValue<double>("button-opacity"));
 
         // resources/macro_button.png (500x500). Falls back to a plain button if it's missing.
-        m_icon = CCSprite::create(Mod::get()->expandSpriteName("macro_button.png"));
+        m_icon = CCSprite::create(Mod::get()->expandSpriteName("macro_button.png").c_str());
         if (!m_icon) m_icon = CCSprite::createWithSpriteFrameName("GJ_button_01.png");
         m_icon->setScale(m_size / m_icon->getContentSize().width);
         m_icon->setOpacity(static_cast<GLubyte>(255.f * opacity / 100.f));
