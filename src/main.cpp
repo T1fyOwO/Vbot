@@ -31,10 +31,11 @@ void toast(std::string const& text, NotificationIcon icon = NotificationIcon::In
 
 class $modify(VbBaseGameLayer, GJBaseGameLayer) {
     // Runs once per physics step. We use it as the frame counter and as the moment to inject inputs.
-    void processCommands(float dt) {
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
         auto& s = vbot::State::get();
+
         if (!PlayLayer::get()) {
-            GJBaseGameLayer::processCommands(dt);
+            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
             return;
         }
 
@@ -47,7 +48,7 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
             }
         }
 
-        GJBaseGameLayer::processCommands(dt);
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
         s.frame++;
     }
 
@@ -77,6 +78,7 @@ class $modify(VbPlayLayer, PlayLayer) {
         if (s.mode == vbot::Mode::Recording) s.macro.inputs.clear();
     }
 };
+
 // --- Pause menu buttons -----------------------------------------------------------------------
 
 class $modify(VbPauseLayer, PauseLayer) {
