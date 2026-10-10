@@ -1,5 +1,4 @@
 // render_guard.hpp - blocks rendering and shows an install popup when FFmpeg API is missing.
-// Put this in src/ and call vbot::canRender() at the start of your render button's callback.
 #pragma once
 #include <Geode/Geode.hpp>
 
@@ -7,14 +6,12 @@ namespace vbot {
 
 constexpr char const* FFMPEG_API_ID = "eclipse.ffmpeg-api";
 
-// True if FFmpeg API is installed AND enabled.
+// True if FFmpeg API is installed and loaded.
 inline bool ffmpegApiLoaded() {
-    auto* mod = geode::Loader::get()->getLoadedMod(FFMPEG_API_ID);
-    return mod != nullptr && mod->isEnabled();
+    return geode::Loader::get()->isModLoaded(FFMPEG_API_ID);
 }
 
-// Call this before starting a render:
-//   if (!vbot::canRender()) return;
+// Call before starting a render: if (!vbot::canRender()) return;
 // Returns true when rendering can go ahead. Otherwise shows a popup and returns false.
 inline bool canRender() {
     if (ffmpegApiLoaded()) return true;
@@ -26,7 +23,6 @@ inline bool canRender() {
         "Close", "Open page",
         [](auto*, bool openPage) {
             if (openPage) {
-                // Shows the FFmpeg API page inside Geode's mod browser.
                 geode::openInfoPopup(FFMPEG_API_ID);
             }
         }
