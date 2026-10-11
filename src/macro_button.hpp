@@ -1,18 +1,18 @@
-// macro_button.hpp - the macro_button.png icon.
-//   tap  -> opens/closes the Record / Replay / Render menu
+// macro_button.hpp - the macro_button.png icon on the pause screen.
+//   tap  -> opens the Vbot menu
 //   drag -> moves the button (position is saved)
 //   size and opacity come from the mod settings
+//   the icon turns red while a macro is recording
 #pragma once
 #include <Geode/Geode.hpp>
 
-#include "actions.hpp"
+#include "menu.hpp"
 
 using namespace geode::prelude;
 
 class MacroButton : public CCNode, public CCTouchDelegate {
 protected:
     CCSprite* m_icon = nullptr;
-    CCMenu* m_menu = nullptr;
     float m_size = 60.f;
     CCPoint m_touchStart;
     CCPoint m_nodeStart;
@@ -32,39 +32,14 @@ protected:
         m_icon->setOpacity(static_cast<GLubyte>(255.f * opacity / 100.f));
         this->addChild(m_icon);
 
-        m_menu = CCMenu::create();
-        m_menu->setPosition({0.f, 0.f});
-        m_menu->setVisible(false);
-        this->addChild(m_menu);
-
-        addItem("Record", menu_selector(MacroButton::onRecord), 40.f);
-        addItem("Replay", menu_selector(MacroButton::onReplay), 0.f);
-        addItem("Render", menu_selector(MacroButton::onRender), -40.f);
-
+        this->schedule(schedule_selector(MacroButton::refreshTint), 0.25f);
+        this->refreshTint(0.f);
         return true;
     }
 
-    void addItem(char const* label, SEL_MenuHandler cb, float y) {
-        auto* spr = ButtonSprite::create(label);
-        spr->setScale(0.7f);
-        auto* item = CCMenuItemSpriteExtra::create(spr, this, cb);
-        item->setPosition({0.f, y});
-        m_menu->addChild(item);
-    }
-
-    void onRecord(CCObject*) { vbot::toggleRecord(); }
-    void onReplay(CCObject*) { vbot::armReplay(); }
-    void onRender(CCObject*) { vbot::startRender(); }
-
-    void toggleMenu() {
-        bool show = !m_menu->isVisible();
-        if (show) {
-            // Open towards the middle of the screen so the menu never goes off-screen.
-            auto win = CCDirector::get()->getWinSize();
-            float dir = this->getPositionX() > win.width / 2.f ? -1.f : 1.f;
-            m_menu->setPosition({dir * (m_size / 2.f + 60.f), 0.f});
-        }
-        m_menu->setVisible(show);
+    void refreshTint(float) {
+        bool recording = vbot::State::get().mode == vbot::Mode::Recording;
+        m_icon->setColor(recording ? ccc3(255, 90, 90) : ccc3(255, 255, 255));
     }
 
 public:
@@ -89,7 +64,7 @@ public:
     }
 
     bool ccTouchBegan(CCTouch* touch, CCEvent*) override {
-        if (!this->isVisible()) return false;
+        if (!this->isVisible() || VbotMenu::isOpen()) return false;
         auto local = this->convertToNodeSpace(touch->getLocation());
         if (!m_icon->boundingBox().containsPoint(local)) return false;
         m_pressed = true;
@@ -119,7 +94,7 @@ public:
             Mod::get()->setSavedValue<float>("macro-button-x", this->getPositionX());
             Mod::get()->setSavedValue<float>("macro-button-y", this->getPositionY());
         } else {
-            this->toggleMenu();
+            if (auto* menu = VbotMenu::create()) menu->show();
         }
         m_dragging = false;
     }
