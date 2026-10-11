@@ -6,9 +6,9 @@
     },
     "id": "t1fy.vbot",
     "name": "Vbot",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "developer": "T1fyOwO",
-    "description": "Multi Purpose Macro",
+    "description": "Multi Purpose Macro/Render Tool For Geometry Dash.",
     "dependencies": {
         "geode.node-ids": ">=v1.23.3"
     },
