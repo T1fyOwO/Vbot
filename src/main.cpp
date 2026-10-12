@@ -5,6 +5,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 
 #include "macro.hpp"
+#include "settings.hpp"
 #include "stats.hpp"
 
 using namespace geode::prelude;
@@ -28,6 +29,13 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
             auto const& inputs = s.macro.inputs;
             while (s.nextInput < inputs.size() && inputs[s.nextInput].frame <= s.frame) {
                 auto const& in = inputs[s.nextInput++];
+                // Accurate macros: put the player back exactly where it was when the input happened.
+                if (in.hasPos) {
+                    if (auto* p = in.player2 ? m_player2 : m_player1) {
+                        p->setPosition({in.x, in.y});
+                        p->m_yVelocity = in.yVel;
+                    }
+                }
                 // Game buttons: 1 = jump, 2 = left, 3 = right. vb::Button is 0-based.
                 this->handleButton(in.down, static_cast<int>(in.button) + 1, !in.player2);
             }
@@ -41,12 +49,16 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
     void handleButton(bool down, int button, bool isPlayer1) {
         auto& s = vbot::State::get();
         if (s.mode == vbot::Mode::Recording && PlayLayer::get() && button >= 1 && button <= 3) {
-            s.macro.inputs.push_back({
-                s.frame,
-                static_cast<vb::Button>(button - 1),
-                down,
-                !isPlayer1,
-            });
+            vb::Input input{s.frame, static_cast<vb::Button>(button - 1), down, !isPlayer1};
+            if (vbot::Config::get().accurate) {
+                if (auto* p = isPlayer1 ? m_player1 : m_player2) {
+                    input.hasPos = true;
+                    input.x = p->getPositionX();
+                    input.y = p->getPositionY();
+                    input.yVel = static_cast<float>(p->m_yVelocity);
+                }
+            }
+            s.macro.inputs.push_back(input);
         }
         GJBaseGameLayer::handleButton(down, button, isPlayer1);
     }
