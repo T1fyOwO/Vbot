@@ -50,7 +50,7 @@ struct Config {
         mod->setSavedValue<bool>("hitboxes", hitboxes);
         mod->setSavedValue<bool>("tps-bypass", tpsBypass);
         mod->setSavedValue<int>("tps", tps);
-        mod->setSavedValue<bool>("tps-scheduler", tpsScheduler);
+        mod->setSavedValue<bool>("tps-whole-game", tpsScheduler);
         mod->setSavedValue<int>("render-width", renderWidth);
         mod->setSavedValue<int>("render-height", renderHeight);
         mod->setSavedValue<int>("render-fps", renderFps);
@@ -69,7 +69,7 @@ private:
         c.hitboxes = mod->getSavedValue<bool>("hitboxes", c.hitboxes);
         c.tpsBypass = mod->getSavedValue<bool>("tps-bypass", c.tpsBypass);
         c.tps = mod->getSavedValue<int>("tps", c.tps);
-        c.tpsScheduler = mod->getSavedValue<bool>("tps-scheduler", c.tpsScheduler);
+        c.tpsScheduler = mod->getSavedValue<bool>("tps-whole-game", c.tpsScheduler);
         c.renderWidth = mod->getSavedValue<int>("render-width", c.renderWidth);
         c.renderHeight = mod->getSavedValue<int>("render-height", c.renderHeight);
         c.renderFps = mod->getSavedValue<int>("render-fps", c.renderFps);
