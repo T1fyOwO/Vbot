@@ -106,7 +106,7 @@ geode build
 - [x] TPS bypass, experimental *(1.0.2)*
 - [ ] FFmpeg video rendering
 - [ ] Hitbox trail
-- [ ] Optional position data for more accurate replays
+- [x] Optional position data for more accurate replays
 
 Noclip and TPS changes count as cheats, so Vbot stops runs from counting while they're on.
 
