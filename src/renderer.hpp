@@ -8,7 +8,7 @@
 //   3. Rendering stops when the macro has finished (plus a short tail), the level is completed
 //      (plus ~3 seconds), the player dies, you press Stop, or you leave the level.
 //
-// Talks to FFmpeg API through its events header (src/ffmpeg/events.hpp), so Vbot doesn't need to
+// Talks to FFmpeg API through its events header (src/events.hpp), so Vbot doesn't need to
 // link against it. If FFmpeg API isn't installed, the Recorder just isn't valid and we say so.
 #pragma once
 #include <Geode/Geode.hpp>
@@ -19,7 +19,7 @@
 #include <span>
 #include <vector>
 
-#include "ffmpeg/events.hpp"
+#include "events.hpp"
 #include "macro.hpp"
 #include "render_guard.hpp"
 #include "settings.hpp"
