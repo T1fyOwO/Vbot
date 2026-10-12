@@ -21,6 +21,7 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
             return;
         }
 
+        vbot::Stats::get().lastStepDt = dt;
         vbot::Stats::get().procCounter++; // for the steps-per-second readout on the Cheats tab
 
         if (s.mode == vbot::Mode::Replaying) {
