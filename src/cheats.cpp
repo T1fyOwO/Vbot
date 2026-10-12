@@ -7,15 +7,49 @@
 #include <Geode/modify/PlayLayer.hpp>
 
 #include <algorithm>
+#include <array>
 
 #include "settings.hpp"
+#include "stats.hpp"
 
 using namespace geode::prelude;
 
 namespace {
+
 // A lag spike can hand us a huge frame time; never run more than this many steps for one frame.
 constexpr int MAX_STEPS_PER_FRAME = 1000;
+
+// While the TPS bypass runs several steps in one frame, only the last one needs to draw hitboxes.
+bool g_skipDraw = false;
+// Set when the game's own postUpdate ran during the current update (so we don't draw twice).
+bool g_postUpdateRan = false;
+
+// Draws the game's own hitboxes, whatever the mode. The game normally only does this in
+// practice mode (PlayLayer::shouldDebugDraw is "debug draw on AND practice mode"), so we turn
+// the drawing on and ask for it directly.
+void drawGameHitboxes(PlayLayer* pl) {
+    auto& stats = vbot::Stats::get();
+    if (!pl->m_objectLayer) return;
+
+    // The draw node should already exist; make one if the game never did.
+    if (!pl->m_debugDrawNode) {
+        pl->m_debugDrawNode = CCDrawNode::create();
+        pl->m_objectLayer->addChild(pl->m_debugDrawNode, 1000);
+        stats.hitboxNodeCreated = true;
+    }
+    if (!pl->m_debugDrawPoints) {
+        pl->m_debugDrawPoints = new std::array<CCPoint, 400>();
+    }
+
+    auto* node = pl->m_debugDrawNode;
+    pl->m_isDebugDrawEnabled = true;
+    node->setVisible(true);
+    node->m_bUseArea = false; // the game's draw-area culling can hide everything outside practice mode
+    pl->updateDebugDraw();
+    stats.hitboxVertices = static_cast<int>(node->m_nBufferCount);
 }
+
+} // namespace
 
 // --- TPS bypass (GJBaseGameLayer) --------------------------------------------------------------
 //
@@ -29,23 +63,43 @@ constexpr int MAX_STEPS_PER_FRAME = 1000;
 //
 // TPS below 240 isn't supported: the game always splits a step longer than 1/240 back into
 // 1/240 pieces. At exactly 240 (or with the bypass off) the original code runs untouched.
+//
+// A higher TPS makes physics more precise. It does NOT make the game run faster, so the level
+// looks the same; the Cheats tab shows the measured steps per second to prove it is working.
 
 class $modify(VbTpsLayer, GJBaseGameLayer) {
     struct Fields {
-        double leftover = 0.0;  // real time not turned into a physics step yet
-        bool stepping = false;  // true while we are running our own physics steps
+        double leftover = 0.0;   // real time not turned into a physics step yet
+        bool stepping = false;   // true while we are running our own physics steps
+        bool announced = false;  // the "TPS bypass is on" toast was shown for this level
     };
 
     void update(float dt) {
         auto& cfg = vbot::Config::get();
         auto* pl = PlayLayer::get();
-        bool active = cfg.tpsBypass && cfg.tps > vbot::NORMAL_TPS && pl &&
-                      static_cast<GJBaseGameLayer*>(pl) == static_cast<GJBaseGameLayer*>(this);
+        bool inLevel = pl && static_cast<GJBaseGameLayer*>(pl) == static_cast<GJBaseGameLayer*>(this);
+
+        if (!inLevel) {
+            GJBaseGameLayer::update(dt);
+            return;
+        }
+
+        g_postUpdateRan = false;
+        bool active = cfg.tpsBypass && cfg.tps > vbot::NORMAL_TPS;
 
         if (!active) {
             m_fields->leftover = 0.0;
+            m_fields->announced = false;
             GJBaseGameLayer::update(dt);
+            vbot::Stats::get().tick(dt, 1);
+            if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
             return;
+        }
+
+        if (!m_fields->announced) {
+            m_fields->announced = true;
+            Notification::create(fmt::format("Vbot: TPS bypass on, {} TPS", cfg.tps),
+                                 NotificationIcon::Info, 1.5f)->show();
         }
 
         double step = 1.0 / static_cast<double>(cfg.tps);
@@ -61,9 +115,14 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
 
         m_fields->stepping = true;
         for (int i = 0; i < count; i++) {
+            g_skipDraw = (i != count - 1);
             GJBaseGameLayer::update(static_cast<float>(step));
         }
+        g_skipDraw = false;
         m_fields->stepping = false;
+
+        vbot::Stats::get().tick(dt, static_cast<uint32_t>(count));
+        if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
     }
 
     double getModifiedDelta(float dt) {
@@ -85,15 +144,12 @@ class $modify(VbCheatPlayLayer, PlayLayer) {
         PlayLayer::destroyPlayer(player, object);
     }
 
-    // Hitboxes: the game only draws its hitboxes in practice mode, so after every update we turn
-    // its debug drawing on and ask it to draw, whatever the mode.
+    // Hitboxes: after the game's own per-frame work, draw them.
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
-        if (!vbot::Config::get().hitboxes || !m_debugDrawNode) return;
-
-        m_isDebugDrawEnabled = true;
-        m_debugDrawNode->setVisible(true);
-        this->updateDebugDraw();
+        g_postUpdateRan = true;
+        if (g_skipDraw || !vbot::Config::get().hitboxes) return;
+        drawGameHitboxes(this);
     }
 
     // Cheats on: treat the completion as a test run so it isn't saved.
