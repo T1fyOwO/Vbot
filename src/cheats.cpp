@@ -137,17 +137,6 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
         g_skipDraw = false;
         m_fields->stepping = false;
 
-        // Safety net: we asked for steps of 1/TPS. If the game still ran steps close to 1/240,
-        // it ignored us, and every extra call would just make the game run faster. Switch the
-        // bypass off for this session instead of speeding the game up.
-        if (count > 0 && stats.lastStepDt > 1.5 / static_cast<double>(cfg.tps)) {
-            stats.bypassIgnored = true;
-            m_fields->leftover = 0.0;
-            m_fields->announced = false;
-            Notification::create("Vbot: this game build ignored the TPS change, bypass turned off",
-                                 NotificationIcon::Warning, 2.5f)->show();
-        }
-
         vbot::Stats::get().tick(dt, static_cast<uint32_t>(count));
         if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
     }
@@ -217,11 +206,6 @@ class $modify(VbScheduler, CCScheduler) {
 
         stats.tick(dt, static_cast<uint32_t>(count));
 
-        if (count > 0 && stats.lastStepDt > 1.5 / static_cast<double>(cfg.tps)) {
-            stats.bypassIgnored = true;
-            Notification::create("Vbot: this game build ignored the TPS change, bypass turned off",
-                                 NotificationIcon::Warning, 2.5f)->show();
-        }
         if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
     }
 };
