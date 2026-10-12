@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 
+#include "renderer.hpp"
 #include "settings.hpp"
 #include "stats.hpp"
 
@@ -103,7 +104,7 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
             return;
         }
 
-        if (cfg.tpsScheduler) {
+        if (cfg.tpsScheduler || vbot::Renderer::get().rendering()) {
             // Scheduler mode: VbScheduler below is already ticking the whole game at 1/TPS, so each
             // update() here is one short tick. Just let the game run it.
             m_fields->stepping = g_schedTicking;
@@ -166,6 +167,29 @@ class $modify(VbScheduler, CCScheduler) {
         auto& stats = vbot::Stats::get();
         auto* pl = PlayLayer::get();
 
+        // Rendering: the game advances by exactly one video frame per call, however long the frame
+        // really takes. Everything below is skipped.
+        auto& renderer = vbot::Renderer::get();
+        if (pl && renderer.rendering()) {
+            auto* scene = CCDirector::get()->getRunningScene();
+            bool paused = scene && scene->getChildByType<PauseLayer>(0);
+            if (!paused) {
+                int tps = cfg.effectiveTps();
+                int ticks = renderer.ticksForNextFrame(tps);
+                float tickDt = 1.f / static_cast<float>(tps);
+                g_schedTicking = cfg.tpsBypass && cfg.tps > vbot::NORMAL_TPS;
+                for (int i = 0; i < ticks; i++) {
+                    g_skipDraw = (i != ticks - 1);
+                    CCScheduler::update(tickDt);
+                }
+                g_skipDraw = false;
+                g_schedTicking = false;
+                if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
+                renderer.captureFrame();
+                return;
+            }
+        }
+
         bool active = pl && cfg.tpsBypass && cfg.tpsScheduler && cfg.tps > vbot::NORMAL_TPS &&
                       !stats.bypassIgnored;
         // Don't speed the pause menu up: only tick fast while the level is really running.
@@ -219,6 +243,7 @@ class $modify(VbCheatPlayLayer, PlayLayer) {
     // so the game's own cheat protection keeps working.
     void destroyPlayer(PlayerObject* player, GameObject* object) {
         if (vbot::Config::get().noclip && object != m_anticheatSpike) return;
+        vbot::Renderer::get().notePlayerDied();
         PlayLayer::destroyPlayer(player, object);
     }
 
@@ -230,8 +255,15 @@ class $modify(VbCheatPlayLayer, PlayLayer) {
         drawGameHitboxes(this);
     }
 
+    // Leaving the level ends a render in progress.
+    void onQuit() {
+        vbot::Renderer::get().cancel("you left the level");
+        PlayLayer::onQuit();
+    }
+
     // Cheats on: treat the completion as a test run so it isn't saved.
     void levelComplete() {
+        vbot::Renderer::get().noteLevelComplete();
         if (vbot::Config::get().cheatsActive()) {
             m_isTestMode = true;
             Notification::create("Vbot: cheats are on, this completion won't count",
