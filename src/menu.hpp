@@ -9,6 +9,7 @@
 
 #include "actions.hpp"
 #include "settings.hpp"
+#include "stats.hpp"
 #include "util.hpp"
 
 using namespace geode::prelude;
@@ -23,6 +24,8 @@ protected:
     CCMenuItemToggler* m_tabs[PAGE_COUNT] = {};
     TextInput* m_nameInput = nullptr;
     CCLabelBMFont* m_status = nullptr;
+    CCLabelBMFont* m_cheatStatus1 = nullptr; // measured physics steps per second
+    CCLabelBMFont* m_cheatStatus2 = nullptr; // hitbox drawing readout
     size_t m_savedCount = 0; // cached so the status line doesn't read the folder every tick
 
     // --- small builders -----------------------------------------------------------------------
@@ -116,12 +119,14 @@ protected:
         addInput(1, "TPS", std::to_string(cfg.tps), 90.f, CommonFilter::Uint, {-95.f, -58.f},
                  [](std::string const& s) {
                      auto& c = vbot::Config::get();
-                     c.tps = vbot::util::parseIntClamped(s, 30, 10000, c.tps);
+                     c.tps = vbot::util::parseIntClamped(s, vbot::NORMAL_TPS, 10000, c.tps);
                      c.save();
                  });
 
-        addLabel(1, "240 = normal speed.", {85.f, -58.f}, .35f);
-        addLabel(1, "Noclip and a TPS other than 240 stop completions from counting.", {0.f, -95.f}, .3f);
+        addLabel(1, "240 or higher. More TPS = more precise physics, not a faster game.", {70.f, -58.f}, .3f);
+        m_cheatStatus1 = addLabel(1, "", {0.f, -84.f}, .32f);
+        m_cheatStatus2 = addLabel(1, "", {0.f, -98.f}, .32f);
+        addLabel(1, "Noclip and a TPS other than 240 stop completions from counting.", {0.f, -116.f}, .28f);
     }
 
     void buildRenderPage() {
@@ -226,6 +231,22 @@ protected:
                 break;
         }
         m_status->setString(text.c_str());
+
+        // Cheats tab readouts: what the game actually did during the last second of play.
+        auto& st = vbot::Stats::get();
+        if (m_cheatStatus1) {
+            std::string phys = (st.stepsPerSec == 0 && st.updatesPerSec == 0)
+                ? std::string("Physics: no data yet, play a level first")
+                : fmt::format("Physics: {} steps/s, {} updates/s", st.stepsPerSec, st.updatesPerSec);
+            m_cheatStatus1->setString(phys.c_str());
+        }
+        if (m_cheatStatus2) {
+            std::string box = st.hitboxVertices < 0
+                ? std::string("Hitboxes: not drawn yet")
+                : fmt::format("Hitboxes: {} vertices drawn on the last frame{}", st.hitboxVertices,
+                              st.hitboxNodeCreated ? " (Vbot made the draw node)" : "");
+            m_cheatStatus2->setString(box.c_str());
+        }
     }
 
     // --- callbacks ----------------------------------------------------------------------------
