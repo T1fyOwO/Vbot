@@ -78,9 +78,20 @@ inline void toggleRecord() {
         return;
     }
 
+    auto* pl = PlayLayer::get();
+    if (!pl || !pl->m_isPracticeMode) {
+        toast("Recording only works in practice mode. Open a level and turn on practice mode first.",
+              geode::NotificationIcon::Warning);
+        return;
+    }
+    if (Renderer::get().rendering()) {
+        toast("Can't record while rendering.", geode::NotificationIcon::Warning);
+        return;
+    }
+
     s.macro.inputs.clear();
     s.mode = Mode::Recording;
-    toast("Recording. Restart the level to begin a clean attempt.");
+    toast("Recording. Place checkpoints and keep going: every attempt is added until you stop.");
 }
 
 // Loads the macro named in the settings and switches to replay mode. Returns false (and says why)
