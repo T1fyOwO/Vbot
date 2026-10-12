@@ -1,9 +1,11 @@
 // main.cpp - Vbot: frame counter, input recorder, replay injection, restart handling.
 // (The pause-menu button lives in pause_hooks.cpp / macro_button.hpp.)
 #include <Geode/Geode.hpp>
+#include <cmath>
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 
+#include "actions.hpp"
 #include "macro.hpp"
 #include "renderer.hpp"
 #include "settings.hpp"
@@ -66,18 +68,16 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
 };
 
 // --- Checkpoints and restarts -----------------------------------------------------------------
-// Recording keeps going across deaths until you tap Record again. When you respawn from a
-// checkpoint, the macro is cut back to that checkpoint's frame and recording continues from there.
-// Restarting from the very beginning (no checkpoint) starts a fresh macro.
-
-namespace {
-std::vector<uint32_t> g_checkpointFrames; // frame counter when each checkpoint was stored
-}
+// Recording works in practice mode only, and it keeps going across deaths until you stop it.
+// Every checkpoint remembers the frame it was made on (stored in the checkpoint object itself, so
+// deleted or replaced checkpoints can't get out of step). When you respawn from a checkpoint, the
+// macro is cut back to that frame and recording continues from there, so a macro is built up over
+// as many attempts as you like. Restarting from the very beginning (no checkpoint) starts over.
 
 class $modify(VbPlayLayer, PlayLayer) {
     void storeCheckpoint(CheckpointObject* checkpoint) {
         PlayLayer::storeCheckpoint(checkpoint);
-        g_checkpointFrames.push_back(vbot::State::get().frame);
+        if (checkpoint) checkpoint->setTag(static_cast<int>(vbot::State::get().frame));
     }
 
     void resetLevel() {
@@ -85,39 +85,61 @@ class $modify(VbPlayLayer, PlayLayer) {
         auto& s = vbot::State::get();
         vbot::Renderer::get().onRestart(); // starts an armed render
 
-        size_t count = m_checkpointArray ? m_checkpointArray->count() : 0;
-        if (count < g_checkpointFrames.size()) g_checkpointFrames.resize(count);
+        CheckpointObject* cp = nullptr;
+        if (m_checkpointArray && m_checkpointArray->count() > 0) {
+            cp = static_cast<CheckpointObject*>(m_checkpointArray->lastObject());
+        }
 
-        if (count == 0 || g_checkpointFrames.size() < count) {
+        if (!cp) {
             // Fresh start from the beginning.
-            g_checkpointFrames.clear();
             s.frame = 0;
             s.nextInput = 0;
             if (s.mode == vbot::Mode::Recording) s.macro.inputs.clear();
             return;
         }
 
-        // Respawn from the last checkpoint: rewind to the frame it was stored on.
-        uint32_t cp = g_checkpointFrames.back();
-        s.frame = cp;
+        // Respawn from the last checkpoint: rewind to the frame it was made on.
+        // (If the checkpoint has no tag, work the frame out from the level time it saved.)
+        uint32_t frame;
+        if (cp->getTag() >= 0) {
+            frame = static_cast<uint32_t>(cp->getTag());
+        } else {
+            frame = static_cast<uint32_t>(std::llround(
+                cp->m_gameState.m_levelTime * vbot::Config::get().effectiveTps()));
+        }
+        s.frame = frame;
 
         auto& inputs = s.macro.inputs;
         if (s.mode == vbot::Mode::Recording) {
-            std::erase_if(inputs, [cp](vb::Input const& in) { return in.frame >= cp; });
+            std::erase_if(inputs, [frame](vb::Input const& in) { return in.frame >= frame; });
 
             // The game releases every button on respawn, so close any press that is still open.
             bool held[3][2] = {};
             for (auto const& in : inputs) held[static_cast<int>(in.button)][in.player2] = in.down;
             for (int b = 0; b < 3; b++) {
                 for (int p = 0; p < 2; p++) {
-                    if (held[b][p]) inputs.push_back({cp, static_cast<vb::Button>(b), false, p == 1});
+                    if (held[b][p]) inputs.push_back({frame, static_cast<vb::Button>(b), false, p == 1});
                 }
             }
         }
 
         // Replay: carry on from the first input at or after this frame.
-        auto it = std::lower_bound(inputs.begin(), inputs.end(), cp,
+        auto it = std::lower_bound(inputs.begin(), inputs.end(), frame,
                                    [](vb::Input const& in, uint32_t f) { return in.frame < f; });
         s.nextInput = static_cast<size_t>(it - inputs.begin());
+    }
+
+    // Turning practice mode off while recording saves the macro, since recording needs practice mode.
+    void togglePracticeMode(bool practiceMode) {
+        PlayLayer::togglePracticeMode(practiceMode);
+        if (!practiceMode && vbot::State::get().mode == vbot::Mode::Recording) {
+            vbot::toggleRecord(); // saves
+        }
+    }
+
+    // Leaving the level while recording saves the macro too.
+    void onQuit() {
+        if (vbot::State::get().mode == vbot::Mode::Recording) vbot::toggleRecord();
+        PlayLayer::onQuit();
     }
 };
