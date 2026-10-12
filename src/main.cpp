@@ -5,6 +5,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 
 #include "macro.hpp"
+#include "renderer.hpp"
 #include "settings.hpp"
 #include "stats.hpp"
 
@@ -82,6 +83,7 @@ class $modify(VbPlayLayer, PlayLayer) {
     void resetLevel() {
         PlayLayer::resetLevel();
         auto& s = vbot::State::get();
+        vbot::Renderer::get().onRestart(); // starts an armed render
 
         size_t count = m_checkpointArray ? m_checkpointArray->count() : 0;
         if (count < g_checkpointFrames.size()) g_checkpointFrames.resize(count);
