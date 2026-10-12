@@ -44,7 +44,7 @@ A macro tool for Geometry Dash, built as a [Geode](https://geode-sdk.org) mod. R
 | **Cheats** | **Noclip**, **Hitboxes**, **TPS Bypass** (experimental) and the TPS value |
 | **Render** | width, height, render FPS, bitrate (Mbps), codec, output name, and the **Render** button |
 
-**Cheats.** Noclip and any TPS other than 240 are cheats. While either is on, finishing a level is treated like a test run and doesn't count. The TPS bypass is experimental: at 240 it runs the game's original code untouched, so leave it at 240 for normal play. Macros remember the TPS they were recorded at, and Vbot warns you if you replay one at a different TPS.
+**Cheats.** Noclip and any TPS other than 240 are cheats. While either is on, finishing a level is treated like a test run and doesn't count. The TPS bypass is experimental: at 240 it runs the game's original code untouched, so leave it at 240 for normal play. TPS must be 240 or higher. More TPS makes physics more precise, it does not make the game faster, so the level looks the same. The Cheats tab shows the measured physics steps per second and how many hitbox vertices were drawn, so you can check that both are working. Macros remember the TPS they were recorded at, and Vbot warns you if you replay one at a different TPS.
 
 ### Settings
 
