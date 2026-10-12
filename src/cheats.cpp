@@ -5,6 +5,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/CCScheduler.hpp>
 
 #include <algorithm>
 #include <array>
@@ -23,6 +24,8 @@ constexpr int MAX_STEPS_PER_FRAME = 1000;
 bool g_skipDraw = false;
 // Set when the game's own postUpdate ran during the current update (so we don't draw twice).
 bool g_postUpdateRan = false;
+// True while the scheduler hook below is feeding the game short ticks.
+bool g_schedTicking = false;
 
 // Draws the game's own hitboxes, whatever the mode. The game normally only does this in
 // practice mode (PlayLayer::shouldDebugDraw is "debug draw on AND practice mode"), so we turn
@@ -98,6 +101,15 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
             return;
         }
 
+        if (cfg.tpsScheduler) {
+            // Scheduler mode: VbScheduler below is already ticking the whole game at 1/TPS, so each
+            // update() here is one short tick. Just let the game run it.
+            m_fields->stepping = g_schedTicking;
+            GJBaseGameLayer::update(dt);
+            m_fields->stepping = false;
+            return;
+        }
+
         if (!m_fields->announced) {
             m_fields->announced = true;
             Notification::create(fmt::format("Vbot: TPS bypass on, {} TPS", cfg.tps),
@@ -145,6 +157,74 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
             return static_cast<double>(dt) * std::min(m_gameState.m_timeWarp, 1.f);
         }
         return GJBaseGameLayer::getModifiedDelta(dt);
+    }
+};
+
+// --- TPS bypass, scheduler mode (CCScheduler) ---------------------------------------------------
+//
+// The scheduler is what calls update() on everything each frame. In this mode we run the scheduler
+// several times per real frame with a short time (1/TPS), so the game sees what it would see at
+// an FPS equal to the TPS. The game's own update() then takes one step of that length.
+// Cocos' scheduler update is cheap when little is scheduled, but animations and music keep their
+// real speed because the total time we feed in per real second is still one second.
+
+class $modify(VbScheduler, CCScheduler) {
+    struct Fields {
+        double leftover = 0.0;
+        bool announced = false;
+    };
+
+    void update(float dt) {
+        auto& cfg = vbot::Config::get();
+        auto& stats = vbot::Stats::get();
+        auto* pl = PlayLayer::get();
+
+        bool active = pl && cfg.tpsBypass && cfg.tpsScheduler && cfg.tps > vbot::NORMAL_TPS &&
+                      !stats.bypassIgnored;
+        // Don't speed the pause menu up: only tick fast while the level is really running.
+        if (active) {
+            auto* scene = CCDirector::get()->getRunningScene();
+            if (scene && scene->getChildByType<PauseLayer>(0)) active = false;
+        }
+        if (!active) {
+            m_fields->leftover = 0.0;
+            m_fields->announced = false;
+            CCScheduler::update(dt);
+            return;
+        }
+
+        if (!m_fields->announced) {
+            m_fields->announced = true;
+            Notification::create(fmt::format("Vbot: TPS bypass on, {} TPS", cfg.tps),
+                                 NotificationIcon::Info, 1.5f)->show();
+        }
+
+        double step = 1.0 / static_cast<double>(cfg.tps);
+        m_fields->leftover += static_cast<double>(dt);
+        int count = static_cast<int>(m_fields->leftover / step);
+        if (count > MAX_STEPS_PER_FRAME) {
+            count = MAX_STEPS_PER_FRAME;
+            m_fields->leftover = 0.0;
+        } else {
+            m_fields->leftover -= count * step;
+        }
+
+        g_schedTicking = true;
+        for (int i = 0; i < count; i++) {
+            g_skipDraw = (i != count - 1);
+            CCScheduler::update(static_cast<float>(step));
+        }
+        g_skipDraw = false;
+        g_schedTicking = false;
+
+        stats.tick(dt, static_cast<uint32_t>(count));
+
+        if (count > 0 && stats.lastStepDt > 1.5 / static_cast<double>(cfg.tps)) {
+            stats.bypassIgnored = true;
+            Notification::create("Vbot: this game build ignored the TPS change, bypass turned off",
+                                 NotificationIcon::Warning, 2.5f)->show();
+        }
+        if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
     }
 };
 
