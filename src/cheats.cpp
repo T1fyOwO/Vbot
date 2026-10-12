@@ -26,6 +26,8 @@ bool g_skipDraw = false;
 bool g_postUpdateRan = false;
 // True while the scheduler hook below is feeding the game short ticks.
 bool g_schedTicking = false;
+double g_schedLeftover = 0.0;   // real time not yet turned into a tick
+bool g_schedAnnounced = false;  // the "TPS bypass on" toast was shown
 
 // Draws the game's own hitboxes, whatever the mode. The game normally only does this in
 // practice mode (PlayLayer::shouldDebugDraw is "debug draw on AND practice mode"), so we turn
@@ -169,12 +171,8 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
 // real speed because the total time we feed in per real second is still one second.
 
 class $modify(VbScheduler, CCScheduler) {
-    struct Fields {
-        double leftover = 0.0;
-        bool announced = false;
-    };
-
     void update(float dt) {
+        // (CCScheduler isn't a CCNode, so m_fields isn't available here; plain globals instead.)
         auto& cfg = vbot::Config::get();
         auto& stats = vbot::Stats::get();
         auto* pl = PlayLayer::get();
@@ -187,26 +185,26 @@ class $modify(VbScheduler, CCScheduler) {
             if (scene && scene->getChildByType<PauseLayer>(0)) active = false;
         }
         if (!active) {
-            m_fields->leftover = 0.0;
-            m_fields->announced = false;
+            g_schedLeftover = 0.0;
+            g_schedAnnounced = false;
             CCScheduler::update(dt);
             return;
         }
 
-        if (!m_fields->announced) {
-            m_fields->announced = true;
+        if (!g_schedAnnounced) {
+            g_schedAnnounced = true;
             Notification::create(fmt::format("Vbot: TPS bypass on, {} TPS", cfg.tps),
                                  NotificationIcon::Info, 1.5f)->show();
         }
 
         double step = 1.0 / static_cast<double>(cfg.tps);
-        m_fields->leftover += static_cast<double>(dt);
-        int count = static_cast<int>(m_fields->leftover / step);
+        g_schedLeftover += static_cast<double>(dt);
+        int count = static_cast<int>(g_schedLeftover / step);
         if (count > MAX_STEPS_PER_FRAME) {
             count = MAX_STEPS_PER_FRAME;
-            m_fields->leftover = 0.0;
+            g_schedLeftover = 0.0;
         } else {
-            m_fields->leftover -= count * step;
+            g_schedLeftover -= count * step;
         }
 
         g_schedTicking = true;
