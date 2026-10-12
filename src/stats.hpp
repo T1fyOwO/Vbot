@@ -10,6 +10,11 @@ struct Stats {
     int stepsPerSec = 0;    // physics steps the game ran (processCommands calls)
     int updatesPerSec = 0;  // times the game's update() ran (frames, or TPS-bypass steps)
 
+    // Size of the last physics step the game ran, in seconds (0 = unknown).
+    double lastStepDt = 0.0;
+    // The game ignored our short steps (it still stepped at ~1/240), so the bypass switched itself off.
+    bool bypassIgnored = false;
+
     // Hitboxes: how many vertices the game's debug drawing produced on the last draw.
     // -1 means hitboxes haven't been drawn yet.
     int hitboxVertices = -1;
