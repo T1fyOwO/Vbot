@@ -237,7 +237,9 @@ protected:
         if (m_cheatStatus1) {
             std::string phys = (st.stepsPerSec == 0 && st.updatesPerSec == 0)
                 ? std::string("Physics: no data yet, play a level first")
-                : fmt::format("Physics: {} steps/s, {} updates/s", st.stepsPerSec, st.updatesPerSec);
+                : fmt::format("Physics: {} steps/s, {} updates/s, step 1/{}{}", st.stepsPerSec, st.updatesPerSec,
+                              st.lastStepDt > 0 ? static_cast<int>(1.0 / st.lastStepDt + 0.5) : 0,
+                              st.bypassIgnored ? " (bypass ignored by game)" : "");
             m_cheatStatus1->setString(phys.c_str());
         }
         if (m_cheatStatus2) {
