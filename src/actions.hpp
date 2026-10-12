@@ -2,7 +2,7 @@
 //
 // Files go in Geode's config folder:
 //   config/t1fy.vbot/Macros/<name>.vb
-//   config/t1fy.vbot/Renders/<name>.mp4   (renderer comes in the next build)
+//   config/t1fy.vbot/Renders/<name>.mp4
 #pragma once
 #include <Geode/Geode.hpp>
 
@@ -10,6 +10,7 @@
 
 #include "macro.hpp"
 #include "render_guard.hpp"
+#include "renderer.hpp"
 #include "settings.hpp"
 #include "util.hpp"
 
@@ -82,7 +83,9 @@ inline void toggleRecord() {
     toast("Recording. Restart the level to begin a clean attempt.");
 }
 
-inline void armReplay() {
+// Loads the macro named in the settings and switches to replay mode. Returns false (and says why)
+// if it can't. With quiet = true it doesn't show the "restart the level" toast.
+inline bool armReplay(bool quiet = false) {
     auto& s = State::get();
     auto& cfg = Config::get();
 
@@ -90,12 +93,12 @@ inline void armReplay() {
     if (!data) {
         toast(fmt::format("No macro named {} found.", util::sanitizeName(cfg.macroName)),
               geode::NotificationIcon::Error);
-        return;
+        return false;
     }
     auto macro = vb::decode(data.unwrap());
     if (!macro) {
         toast("That macro file is corrupted.", geode::NotificationIcon::Error);
-        return;
+        return false;
     }
 
     s.macro = std::move(*macro);
@@ -106,20 +109,36 @@ inline void armReplay() {
         toast(fmt::format("Warning: recorded at {} TPS, but you are at {} TPS.", s.macro.fps,
                           cfg.effectiveTps()),
               geode::NotificationIcon::Warning);
-    } else {
+    } else if (!quiet) {
         toast(fmt::format("Loaded {} inputs. Restart the level to replay.", s.macro.inputs.size()),
               geode::NotificationIcon::Success);
     }
+    return true;
 }
 
 inline void stopAll() {
+    Renderer::get().cancel("stopped");
     State::get().mode = Mode::Idle;
 }
 
+// Render button: loads the macro and arms the renderer. The video starts on the next level restart.
 inline void startRender() {
     if (!canRender()) return;
-    // The renderer arrives in the next build.
-    toast("FFmpeg API found. Rendering comes in the next build.");
+    if (State::get().mode == Mode::Recording) {
+        toast("Stop recording first.", geode::NotificationIcon::Warning);
+        return;
+    }
+    if (!PlayLayer::get()) {
+        toast("Open a level first, then press Render.", geode::NotificationIcon::Warning);
+        return;
+    }
+    if (Renderer::get().rendering()) {
+        toast("Already rendering. Press Stop to end it.", geode::NotificationIcon::Warning);
+        return;
+    }
+    if (!armReplay(true)) return;
+    Renderer::get().arm();
+    toast("Render ready. Close the menu and restart the level to start.", geode::NotificationIcon::Success);
 }
 
 } // namespace vbot
