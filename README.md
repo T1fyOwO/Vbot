@@ -10,7 +10,7 @@ A macro tool for Geometry Dash, built as a [Geode](https://geode-sdk.org) mod. R
 
 ## Features
 
-- **Record** your inputs while you play.
+- **Record** your inputs in practice mode, over as many attempts as you like.
 - **Replay** a saved macro from frame 0.
 - **Movable macro button:** a `macro_button.png` icon on the pause screen opens the macro menu. Tap it to open the menu, drag it to move it. Its position is saved.
 - **Adjustable button** size and opacity in the mod settings.
@@ -31,7 +31,7 @@ A macro tool for Geometry Dash, built as a [Geode](https://geode-sdk.org) mod. R
 ## Using it
 
 1. Pause a level and tap the **Vb** button. In 1.0.4-beta this opens the full menu; in 1.0.1 it opens a small Record / Replay / Render list.
-2. **Record:** tap **Record**, restart the level, and play. Recording keeps going across deaths until you tap **Record** again, which stops it and saves the macro. In practice mode, respawning from a checkpoint cuts the macro back to that checkpoint and keeps recording, so the macro always ends up as one clean run. Restarting from the very beginning starts a fresh macro.
+2. **Record:** recording only works in **practice mode**. Turn on practice mode, tap **Record**, restart the level and play. Place checkpoints as you go: every attempt is added to the same macro. When you die and respawn from a checkpoint, the macro is cut back to that checkpoint and recording continues from there, so it always ends up as one clean run. Dying with no checkpoint restarts the macro from the beginning. Tap **Record** again to stop and save. Leaving the level or turning practice mode off also stops and saves it.
 3. **Replay:** tap **Replay** to load the saved macro, then restart the level to play it back from frame 0.
 4. **Render:** open a level, pick the macro on the **Macro** tab, set the size and FPS on the **Render** tab, then press **Render** and restart the level. The game runs slower than normal while it renders, and the video is saved when the macro ends, the level completes, or you press **Stop**. There is no sound yet, so turn the in-game music down while rendering.
 
