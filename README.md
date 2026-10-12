@@ -57,11 +57,12 @@ To move the button, drag it on the pause screen. Its position is saved between s
 
 ## The `.vb` format
 
-Binary (everything is a plain byte or a varint, so byte order never matters). Vbot stores **inputs only**, not player positions, so replays rely on the game's physics behaving the same way each time.
+Binary (everything is a plain byte or a varint, so byte order never matters). Version 1 stores **inputs only**, so replays rely on the game's physics behaving the same way each time. Version 2 ("accurate" macros, the default since 1.0.2) also stores the player's position and vertical speed with every input, and replay snaps the player back to it so long macros don't drift. Macros without position data are still written as version 1.
 
 ```
 "VBOT"          4 bytes   magic
-version         1 byte    currently 1
+version         1 byte    1 or 2
+flags           1 byte    version 2 only: bit 0 = every event is followed by x, y, y-velocity (3 x float32, little-endian; x = NaN means no data for that event)
 fps             varint    physics ticks per second (240 by default)
 event count     varint    number of inputs that follow
 events          count x varint
