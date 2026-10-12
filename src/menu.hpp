@@ -116,8 +116,11 @@ protected:
 
         addToggle(1, "Noclip", cfg.noclip, menu_selector(VbotMenu::onNoclip), {-150.f, 62.f});
         addToggle(1, "Hitboxes", cfg.hitboxes, menu_selector(VbotMenu::onHitboxes), {-150.f, 24.f});
-        addToggle(1, "TPS Bypass (experimental)", cfg.tpsBypass, menu_selector(VbotMenu::onTpsToggle),
+        addToggle(1, "TPS Bypass", cfg.tpsBypass, menu_selector(VbotMenu::onTpsToggle),
                   {-150.f, -14.f});
+
+        addToggle(1, "TPS: tick whole game", cfg.tpsScheduler, menu_selector(VbotMenu::onTpsScheduler),
+                  {20.f, -14.f});
 
         addInput(1, "TPS", std::to_string(cfg.tps), 90.f, CommonFilter::Uint, {-95.f, -58.f},
                  [](std::string const& s) {
@@ -329,6 +332,16 @@ protected:
             pl->updateDebugDrawSettings();
             if (!pl->m_isDebugDrawEnabled && pl->m_debugDrawNode) pl->m_debugDrawNode->clear();
         }
+    }
+
+    void onTpsScheduler(CCObject* sender) {
+        auto* toggle = static_cast<CCMenuItemToggler*>(sender);
+        bool value = !toggle->isToggled();
+        toggle->toggle(value);
+        auto& cfg = vbot::Config::get();
+        cfg.tpsScheduler = value;
+        cfg.save();
+        vbot::Stats::get().bypassIgnored = false; // give the new method a fresh try
     }
 
     void onTpsToggle(CCObject* sender) {
