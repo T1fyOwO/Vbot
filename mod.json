@@ -6,7 +6,7 @@
     },
     "id": "t1fy.vbot",
     "name": "Vbot",
-    "version": "1.0.2-beta",
+    "version": "1.0.3-beta",
     "developer": "T1fyOwO",
     "description": "Multi Purpose Macro/Render Tool For Geometry Dash.",
     "dependencies": {
