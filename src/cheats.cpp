@@ -175,7 +175,9 @@ class $modify(VbScheduler, CCScheduler) {
         }
         if (!active) {
             g_schedLeftover = 0.0;
-            g_schedAnnounced = false;
+            // Only forget the toast when the bypass is off or you left the level, so restarting or pausing
+            // doesn't show it again.
+            if (!cfg.tpsBypass || !pl) g_schedAnnounced = false;
             CCScheduler::update(dt);
             return;
         }
