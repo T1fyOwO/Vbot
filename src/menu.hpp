@@ -176,7 +176,8 @@ protected:
                  });
 
         addButton(2, "Render", menu_selector(VbotMenu::onRender), {0.f, -72.f}, .8f);
-        addLabel(2, "Videos are saved in config/t1fy.vbot/Renders", {0.f, -105.f}, .3f);
+        addLabel(2, "Pick the macro on the Macro tab, press Render, then restart the level.", {0.f, -92.f}, .3f);
+        addLabel(2, "Video only for now. Videos are saved in config/t1fy.vbot/Renders", {0.f, -106.f}, .3f);
     }
 
     // --- setup --------------------------------------------------------------------------------
