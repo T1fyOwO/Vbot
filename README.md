@@ -1,72 +1,125 @@
-# Vbot
+<p align="center">
+  <img src="logo.png" width="140" alt="Vbot logo">
+</p>
 
-A macro tool for Geometry Dash, built as a [Geode](https://geode-sdk.org) mod. Record your inputs, replay them frame by frame, and render the run to video. Vbot comes with its own compact macro format, **`.vb`**, which stores a recorded input in about 1.8 bytes.
+<h1 align="center">Vbot</h1>
 
-**Platforms:** Windows and Android (64-bit) · **Game version:** 2.2081
+<p align="center">
+  A macro bot for Geometry Dash, built as a <a href="https://geode-sdk.org">Geode</a> mod.<br>
+  Record in practice mode, replay frame by frame, and render the run to video.
+</p>
 
-> **Status:** early development. Recording and replaying work from the pause menu. Version 1.0.4-beta is the current beta and adds a full menu, noclip, hitboxes and a TPS bypass; video rendering is new (video only, no sound yet) and the hitbox trail is still to come (see the [roadmap](#roadmap)).
+<p align="center">
+  <b>Version</b> 1.0.4-beta &nbsp;·&nbsp; <b>Game</b> 2.2081 &nbsp;·&nbsp; <b>Platforms</b> Windows, Android (64-bit)
+</p>
+
+> **Beta.** Recording, replaying and the menu are the core of Vbot. The renderer, the TPS bypass and accurate macros are new and still being tested, so expect rough edges. If something breaks, please [open an issue](https://github.com/T1fyOwO/Vbot/issues).
 
 ---
 
-## Features
+## What it does
 
-- **Record** your inputs in practice mode, over as many attempts as you like.
-- **Replay** a saved macro from frame 0.
-- **Movable macro button:** a `macro_button.png` icon on the pause screen opens the macro menu. Tap it to open the menu, drag it to move it. Its position is saved.
-- **Adjustable button** size and opacity in the mod settings.
-- **`.vb` macro format:** tiny files, inputs only, easy to parse (full spec below).
-- **Full menu** *(1.0.4-beta)*: one popup with three tabs, **Macro**, **Cheats** and **Render**. Every value is saved as soon as you change it.
-- **Accurate macros** *(1.0.4-beta)*: Vbot can save the player's position with each input and snap back to it on replay, so long macros don't drift. It's a toggle on the Macro tab and macros without it still load.
-- **Custom macro names** *(1.0.4-beta)*: save and load macros by name, with arrows to flip through the ones you already have.
-- **Noclip**, **hitboxes** and an experimental **TPS bypass** *(1.0.4-beta)*.
-- **Render settings** *(1.0.4-beta)*: resolution, render FPS, bitrate, codec and output name. 
-- **FFmpeg rendering** *(1.0.4-beta, video only)* through [FFmpeg API](https://geode-sdk.org/mods/eclipse.ffmpeg-api). If it isn't installed, Vbot shows a popup telling you to install it instead of failing.
+| | |
+| --- | --- |
+| **Record** | Practice mode only. Build one macro across as many attempts as you like, using checkpoints. |
+| **Replay** | Play a saved macro back from frame 0. |
+| **Accurate macros** | Optionally saves the player's position with every input and snaps back to it on replay, so long macros don't drift. |
+| **Render** | Turns a replay into an `.mp4` with the level's song, through [FFmpeg API](https://geode-sdk.org/mods/eclipse.ffmpeg-api). |
+| **Cheats** | Noclip, hitboxes, a TPS bypass and a speed hack. |
+| **`.vb` format** | Vbot's own macro format. About 1.8 bytes per input. |
+| **Full menu** | One popup with Macro, Cheats and Render tabs. Everything you change is saved right away. |
 
-## Installing
+## Install
 
-1. Install [Geode](https://geode-sdk.org) for Geometry Dash 2.2081 (Windows or Android).
-2. Download the latest `.geode` file from the [Releases page](https://github.com/T1fyOwO/Vbot/releases).
-3. Put it in Geode's `mods` folder (or open the file with Geode), then restart the game.
+1. Install [Geode](https://geode-sdk.org) for Geometry Dash 2.2081 (Windows or Android 64-bit).
+2. Download the latest `.geode` from the [Releases page](https://github.com/T1fyOwO/Vbot/releases).
+3. Open it with Geode (or drop it in Geode's `mods` folder) and restart the game.
+4. *Only for rendering:* also install **FFmpeg API** from Geode's in-game mod list. If it's missing, Vbot tells you when you press Render.
 
-## Using it
+## Quick start
 
-1. Pause a level and tap the **Vb** button. In 1.0.4-beta this opens the full menu; in 1.0.1 it opens a small Record / Replay / Render list.
-2. **Record:** recording only works in **practice mode**. Turn on practice mode, tap **Record**, restart the level and play. Place checkpoints as you go: every attempt is added to the same macro. When you die and respawn from a checkpoint, the macro is cut back to that checkpoint and recording continues from there, so it always ends up as one clean run. Dying with no checkpoint restarts the macro from the beginning. Tap **Record** again to stop and save. Leaving the level or turning practice mode off also stops and saves it.
-3. **Replay:** tap **Replay** to load the saved macro, then restart the level to play it back from frame 0.
-4. **Render:** open a level, pick the macro on the **Macro** tab, set the size and FPS on the **Render** tab, then press **Render** and restart the level. The game runs slower than normal while it renders, and the video is saved when the macro ends, the level completes, or you press **Stop**. There is no sound yet, so turn the in-game music down while rendering.
+1. Open a level and **pause it**. Tap the **Vb** button to open the menu. You can drag the button anywhere you like, and its size and opacity are in the mod settings.
+2. Go to the **Macro** tab and type a name for your macro.
+3. **Record:** turn on **practice mode**, tap **Record**, restart the level and play. Place checkpoints as you go.
+4. Tap **Record** again to stop and save.
+5. **Replay:** tap **Replay**, then restart the level to watch it play back.
 
-**Where files go.** In 1.0.4-beta, macros are saved as `config/t1fy.vbot/Macros/<name>.vb` (inside your Geode folder), and videos go in `config/t1fy.vbot/Renders`. Type a name in the **Macro name** box to save or load a specific macro. In 1.0.1, the macro is a single `last.vb` in the mod's save folder.
+### How recording works
 
-### The menu (1.0.4-beta)
+Recording only works in practice mode, and it keeps going across deaths until you stop it.
+
+- Each checkpoint remembers the frame it was made on.
+- When you die and respawn from a checkpoint, the macro is cut back to that frame and recording continues from there. The result is always one clean run, however many attempts it took.
+- Dying with **no** checkpoint restarts the macro from the beginning.
+- Tapping **Record** again, leaving the level, or turning practice mode off stops recording and saves the macro.
+
+## Rendering
+
+1. Open the level, then on the **Macro** tab pick the macro you want to render.
+2. On the **Render** tab set the width, height, FPS, bitrate, codec and output name.
+3. Press **Render**, close the menu, and **restart the level**. Rendering starts on the restart.
+
+The game doesn't run in real time while it renders. Every video frame advances the game by exactly 1/FPS seconds, so the result is smooth however long each frame takes. Rendering stops when the macro ends (plus about 2 seconds), about 3 seconds after you complete the level, when you press **Stop**, or when you leave the level.
+
+Videos are saved in `config/t1fy.vbot/Renders`. Vbot never overwrites an earlier render; it adds `_1`, `_2` and so on.
+
+**Audio.** With **Include level audio** on, the level's song is added when the render finishes. For now:
+
+- only songs that start at 0:00 work (Vbot skips audio and tells you if the song starts later),
+- sound effects and song triggers aren't included,
+- turn the in-game music down while rendering.
+
+**Tips.** Use 16:9 sizes such as 1280x720 or 1920x1080 to avoid a stretched picture. Even numbers only; Vbot rounds odd sizes down.
+
+## The menu
 
 | Tab | What's in it |
 | --- | --- |
-| **Macro** | macro name box with previous/next arrows, **Record**, **Replay**, **Stop**, and a status line |
-| **Cheats** | **Noclip**, **Hitboxes**, **TPS Bypass** (experimental) and the TPS value |
-| **Render** | width, height, render FPS, bitrate (Mbps), codec, output name, and the **Render** button |
+| **Macro** | Macro name (with previous/next arrows), **Record**, **Replay**, **Stop**, the **Accurate** switch and a status line. |
+| **Cheats** | **Noclip**, **Hitboxes**, **TPS Bypass** with a TPS box, **Speed hack** with a speed box, and live readouts. |
+| **Render** | Width, height, render FPS, bitrate (Mbps), codec, output name, **Include level audio** and the **Render** button. |
 
-**Cheats.** Noclip and any TPS other than 240 are cheats. While either is on, finishing a level is treated like a test run and doesn't count. The TPS bypass is experimental: at 240 it runs the game's original code untouched, so leave it at 240 for normal play. TPS must be 240 or higher. More TPS makes physics more precise, it does not make the game faster, so the level looks the same. The Cheats tab shows the measured physics steps per second and how many hitbox vertices were drawn, so you can check that both are working. Macros remember the TPS they were recorded at, and Vbot warns you if you replay one at a different TPS.
+### Cheats
 
-### Settings
+Noclip, any TPS other than 240, and any speed other than 1 count as **cheats**. While one is on, finishing a level is treated like a test run, so it won't count or be saved.
+
+- **Noclip:** ignores deaths. The anticheat spike still kills.
+- **Hitboxes:** draws the game's own hitboxes in any mode. The readout shows how many vertices were drawn.
+- **TPS Bypass:** runs physics at a higher tick rate (240 or higher). More TPS makes physics *more precise*; it doesn't make the game faster. It is experimental, and on slower phones a very high value can lag. If so, try 480 or 960. The Physics readout shows the steps per second the game really ran.
+- **Speed hack:** plays the whole game faster or slower (0.1 to 10). It doesn't change the music's speed, and the pause menu keeps its normal speed.
+
+Macros remember the TPS they were recorded at, and Vbot warns you if you replay one at a different TPS.
+
+## Files
+
+Everything lives in Geode's `config/t1fy.vbot` folder:
+
+```
+config/t1fy.vbot/
+├── Macros/    your .vb macros
+└── Renders/   your finished .mp4 videos
+```
+
+## Settings
 
 | Setting | What it does | Default |
 | --- | --- | --- |
-| Button size | Size of the macro button on screen, in pixels | 60 |
+| Button size | Size of the macro button, in pixels | 60 |
 | Button opacity | How see-through the button is, in percent | 100 |
 
-To move the button, drag it on the pause screen. Its position is saved between sessions.
+Everything else is in the Vbot menu itself.
 
 ## The `.vb` format
 
-Binary (everything is a plain byte or a varint, so byte order never matters). Version 1 stores **inputs only**, so replays rely on the game's physics behaving the same way each time. Version 2 ("accurate" macros, the default since 1.0.4-beta) also stores the player's position and vertical speed with every input, and replay snaps the player back to it so long macros don't drift. Macros without position data are still written as version 1.
+Vbot saves macros in its own compact binary format. Everything is a plain byte or a varint, so byte order never matters.
 
 ```
 "VBOT"          4 bytes   magic
 version         1 byte    1 or 2
-flags           1 byte    version 2 only: bit 0 = every event is followed by x, y, y-velocity (3 x float32, little-endian; x = NaN means no data for that event)
+flags           1 byte    version 2 only: bit 0 = every event is followed by x, y, y-velocity
 fps             varint    physics ticks per second (240 by default)
 event count     varint    number of inputs that follow
-events          count x varint
+events          count x varint (each one followed by 12 bytes of position data in version 2)
 ```
 
 Each event is one varint:
@@ -82,13 +135,26 @@ Each event is one varint:
 | `down` | `1` press, `0` release |
 | `player` | `0` player 1, `1` player 2 |
 
+**Version 1** stores inputs only, so replays depend on the game's physics behaving the same way each time. **Version 2** ("accurate" macros) adds the player's position and vertical speed to every input: x, y and y-velocity as three little-endian `float32` values. An x of NaN means there's no data for that input. Macros without position data are still written as version 1, and Vbot reads both.
+
 Varints are LEB128: 7 bits per byte, with the top bit set when more bytes follow. A gap of fewer than 8 frames fits in a single byte per input.
 
 The reference reader and writer is [`src/vb.hpp`](src/vb.hpp), a single header with no dependencies. It rejects empty, truncated and corrupted files.
 
+## Troubleshooting
+
+| Problem | Try this |
+| --- | --- |
+| Record says "only works in practice mode" | Turn on practice mode in the level first. |
+| The replay drifts or dies in a tricky section | Replay with **Accurate** off, and record at 240 TPS. Very high TPS values are the hardest to match. |
+| "FFmpeg API missing" when you press Render | Install **FFmpeg API** from Geode's mod list and restart the game. |
+| The render has no sound | The song may start after 0:00, or **Include level audio** is off. Vbot tells you when it skips audio. |
+| The game lags with the TPS bypass | Lower the TPS (480 is a good start). Cost grows with the number. |
+| A level won't count | Noclip, a TPS other than 240, or a speed other than 1 is on. |
+
 ## Building
 
-Every push is built by GitHub Actions (Windows and Android64). Those build files need a GitHub login to download and they expire, so to just use the mod, get the `.geode` from the [Releases page](https://github.com/T1fyOwO/Vbot/releases) instead.
+Every push is built by GitHub Actions for Windows and Android 64-bit. Those build files need a GitHub login to download and they expire, so to just use the mod, get the `.geode` from the [Releases page](https://github.com/T1fyOwO/Vbot/releases).
 
 To build locally you need the [Geode SDK](https://docs.geode-sdk.org/getting-started/) and the Geode CLI:
 
@@ -101,19 +167,18 @@ geode build
 - [x] Input recorder and replayer
 - [x] `.vb` format
 - [x] Movable, resizable macro button
-- [x] Full menu with Macro, Cheats and Render tabs *(1.0.4-beta)*
-- [x] Custom macro names and the `config/t1fy.vbot` folders *(1.0.4-beta)*
-- [x] Noclip and hitboxes *(1.0.4-beta)*
-- [x] TPS bypass, experimental *(1.0.4-beta)*
-- [x] Optional position data for more accurate replays *(1.0.4-beta)*
-- [x] FFmpeg video rendering, video only *(1.0.4-beta)*
-- [ ] Audio in rendered videos
+- [x] Full menu with Macro, Cheats and Render tabs
+- [x] Custom macro names and the `config/t1fy.vbot` folders
+- [x] Practice-mode recording across checkpoints
+- [x] Noclip, hitboxes, TPS bypass and speed hack
+- [x] Optional position data for more accurate replays
+- [x] FFmpeg video rendering with the level's song
+- [ ] Songs that start partway in, sound effects and song triggers in renders
 - [ ] Hitbox trail
-
-Noclip and TPS changes count as cheats, so Vbot stops runs from counting while they're on.
+- [ ] Position data for both players on every input (better 2-player accuracy)
 
 ## Credits
 
 - Made by [T1fyOwO](https://github.com/T1fyOwO)
 - Built on the [Geode SDK](https://github.com/geode-sdk/geode)
-- Video rendering by [FFmpeg API](https://geode-sdk.org/mods/eclipse.ffmpeg-api) by maxnut
+- Video rendering uses [FFmpeg API](https://geode-sdk.org/mods/eclipse.ffmpeg-api) by the Eclipse Team and contributors
