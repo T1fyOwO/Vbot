@@ -161,11 +161,18 @@ class $modify(VbTpsLayer, GJBaseGameLayer) {
 // real speed because the total time we feed in per real second is still one second.
 
 class $modify(VbScheduler, CCScheduler) {
-    void update(float dt) {
+    void update(float rawDt) {
         // (CCScheduler isn't a CCNode, so m_fields isn't available here; plain globals instead.)
         auto& cfg = vbot::Config::get();
         auto& stats = vbot::Stats::get();
         auto* pl = PlayLayer::get();
+
+        // Speed hack: scale the time the whole game gets. Not while the pause menu is open.
+        float dt = rawDt;
+        if (pl && cfg.effectiveSpeed() != 1.0f) {
+            auto* scene = CCDirector::get()->getRunningScene();
+            if (!(scene && scene->getChildByType<PauseLayer>(0))) dt = rawDt * cfg.effectiveSpeed();
+        }
 
         // Rendering: the game advances by exactly one video frame per call, however long the frame
         // really takes. Everything below is skipped.
@@ -213,7 +220,10 @@ class $modify(VbScheduler, CCScheduler) {
         }
 
         double step = 1.0 / static_cast<double>(cfg.tps);
-        g_schedLeftover += static_cast<double>(dt);
+        // A slow frame must not snowball: if a frame takes long, the next one would need even more
+        // ticks, and the game would lag harder and harder. So never feed in more than 1/30 s of game
+        // time per real frame; if the device can't keep up, the game just runs slower for a moment.
+        g_schedLeftover += std::min(static_cast<double>(dt), 1.0 / 30.0);
         int count = static_cast<int>(g_schedLeftover / step);
         if (count > MAX_STEPS_PER_FRAME) {
             count = MAX_STEPS_PER_FRAME;
@@ -230,7 +240,7 @@ class $modify(VbScheduler, CCScheduler) {
         g_skipDraw = false;
         g_schedTicking = false;
 
-        stats.tick(dt, static_cast<uint32_t>(count));
+        stats.tick(rawDt, static_cast<uint32_t>(count));
 
         if (cfg.hitboxes && !g_postUpdateRan) drawGameHitboxes(pl);
     }
