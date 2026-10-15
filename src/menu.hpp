@@ -1,6 +1,7 @@
 // menu.hpp - the full Vbot menu: a popup with three tabs (Macro, Cheats, Render).
 // Every value is saved as soon as it changes.
 #pragma once
+#include <algorithm>
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
 #include <Geode/ui/TextInput.hpp>
@@ -114,25 +115,31 @@ protected:
     void buildCheatsPage() {
         auto& cfg = vbot::Config::get();
 
-        addToggle(1, "Noclip", cfg.noclip, menu_selector(VbotMenu::onNoclip), {-150.f, 62.f});
-        addToggle(1, "Hitboxes", cfg.hitboxes, menu_selector(VbotMenu::onHitboxes), {-150.f, 24.f});
-        addToggle(1, "TPS Bypass", cfg.tpsBypass, menu_selector(VbotMenu::onTpsToggle),
-                  {-150.f, -14.f});
+        // Two columns of switches. Labels are short so they stay inside the popup.
+        addToggle(1, "Noclip", cfg.noclip, menu_selector(VbotMenu::onNoclip), {-150.f, 70.f});
+        addToggle(1, "Hitboxes", cfg.hitboxes, menu_selector(VbotMenu::onHitboxes), {10.f, 70.f});
+        addToggle(1, "TPS Bypass", cfg.tpsBypass, menu_selector(VbotMenu::onTpsToggle), {-150.f, 34.f});
+        addToggle(1, "Whole game", cfg.tpsScheduler, menu_selector(VbotMenu::onTpsScheduler), {10.f, 34.f});
+        addToggle(1, "Speed hack", cfg.speedHack, menu_selector(VbotMenu::onSpeedToggle), {-150.f, -2.f});
 
-        addToggle(1, "TPS: tick whole game", cfg.tpsScheduler, menu_selector(VbotMenu::onTpsScheduler),
-                  {20.f, -14.f});
-
-        addInput(1, "TPS", std::to_string(cfg.tps), 90.f, CommonFilter::Uint, {-95.f, -58.f},
+        addInput(1, "TPS (240+)", std::to_string(cfg.tps), 100.f, CommonFilter::Uint, {-95.f, -44.f},
                  [](std::string const& s) {
                      auto& c = vbot::Config::get();
                      c.tps = vbot::util::parseIntClamped(s, vbot::NORMAL_TPS, 10000, c.tps);
                      c.save();
                  });
+        addInput(1, "Speed (0.1-10)", fmt::format("{:g}", cfg.speed), 100.f, CommonFilter::Float, {95.f, -44.f},
+                 [](std::string const& s) {
+                     auto& c = vbot::Config::get();
+                     auto parsed = geode::utils::numFromString<float>(s);
+                     if (parsed.isOk()) c.speed = std::clamp(parsed.unwrap(), 0.1f, 10.f);
+                     c.save();
+                 });
 
-        addLabel(1, "240 or higher. More TPS = more precise physics, not a faster game.", {70.f, -58.f}, .3f);
-        m_cheatStatus1 = addLabel(1, "", {0.f, -84.f}, .32f);
-        m_cheatStatus2 = addLabel(1, "", {0.f, -98.f}, .32f);
-        addLabel(1, "Noclip and a TPS other than 240 stop completions from counting.", {0.f, -116.f}, .28f);
+        addLabel(1, "More TPS = more precise physics, not a faster game. Speed changes how fast it plays.", {0.f, -68.f}, .26f);
+        m_cheatStatus1 = addLabel(1, "", {0.f, -86.f}, .3f);
+        m_cheatStatus2 = addLabel(1, "", {0.f, -99.f}, .3f);
+        addLabel(1, "Noclip, TPS other than 240 and speed other than 1 stop completions from counting.", {0.f, -116.f}, .26f);
     }
 
     void buildRenderPage() {
@@ -175,9 +182,12 @@ protected:
                      c.save();
                  });
 
+        addToggle(2, "Include level audio", cfg.renderAudio, menu_selector(VbotMenu::onRenderAudio),
+                  {-80.f, -48.f});
+
         addButton(2, "Render", menu_selector(VbotMenu::onRender), {0.f, -72.f}, .8f);
         addLabel(2, "Pick the macro on the Macro tab, press Render, then restart the level.", {0.f, -92.f}, .3f);
-        addLabel(2, "Video only for now. Videos are saved in config/t1fy.vbot/Renders", {0.f, -106.f}, .3f);
+        addLabel(2, "Videos are saved in config/t1fy.vbot/Renders", {0.f, -106.f}, .3f);
     }
 
     // --- setup --------------------------------------------------------------------------------
@@ -280,6 +290,15 @@ protected:
         this->updateStatus(0.f);
     }
 
+    void onRenderAudio(CCObject* sender) {
+        auto* toggle = static_cast<CCMenuItemToggler*>(sender);
+        bool value = !toggle->isToggled();
+        toggle->toggle(value);
+        auto& cfg = vbot::Config::get();
+        cfg.renderAudio = value;
+        cfg.save();
+    }
+
     void onRender(CCObject*) {
         vbot::startRender();
     }
@@ -333,6 +352,15 @@ protected:
             pl->updateDebugDrawSettings();
             if (!pl->m_isDebugDrawEnabled && pl->m_debugDrawNode) pl->m_debugDrawNode->clear();
         }
+    }
+
+    void onSpeedToggle(CCObject* sender) {
+        auto* toggle = static_cast<CCMenuItemToggler*>(sender);
+        bool value = !toggle->isToggled();
+        toggle->toggle(value);
+        auto& cfg = vbot::Config::get();
+        cfg.speedHack = value;
+        cfg.save();
     }
 
     void onTpsScheduler(CCObject* sender) {
