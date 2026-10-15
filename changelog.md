@@ -1,3 +1,7 @@
+# v1.0.4-beta
+- Added Internal Renderer (With Audio).
+- Finished Hitbox Work For Now.
+- Fixed Compatibility Issuses On TPS Bypass.
 # v1.0.3-beta
 - Fixed various bugs and issues.
 - Improved mod stability.
