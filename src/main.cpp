@@ -35,8 +35,13 @@ class $modify(VbBaseGameLayer, GJBaseGameLayer) {
                 // Accurate macros: put the player back exactly where it was when the input happened.
                 if (in.hasPos) {
                     if (auto* p = in.player2 ? m_player2 : m_player1) {
-                        p->setPosition({in.x, in.y});
-                        p->m_yVelocity = in.yVel;
+                        // Only move the player if it really drifted (an exact match needs no fix),
+                        // and leave the wave alone: its vertical speed isn't a normal velocity,
+                        // so forcing it is what makes a wave break.
+                        bool drifted = std::abs(p->getPositionX() - in.x) > 0.01f ||
+                                       std::abs(p->getPositionY() - in.y) > 0.01f;
+                        if (drifted) p->setPosition({in.x, in.y});
+                        if (drifted && !p->m_isDart) p->m_yVelocity = in.yVel;
                     }
                 }
                 // Game buttons: 1 = jump, 2 = left, 3 = right. vb::Button is 0-based.
