@@ -17,6 +17,8 @@ struct Config {
     bool hitboxes = false;
     bool tpsBypass = false;
     int tps = NORMAL_TPS;
+    bool speedHack = false;
+    float speed = 1.0f;       // game speed multiplier while the speed hack is on
     bool tpsScheduler = true; // TPS bypass method: tick the whole game (true) or only physics (false)
 
     // renderer
@@ -26,6 +28,7 @@ struct Config {
     int bitrateMbps = 30;
     std::string codec = "libx264";
     std::string renderName = "render";
+    bool renderAudio = true; // add the level's song to the video
 
     static Config& get() {
         static Config c = load();
@@ -37,9 +40,14 @@ struct Config {
         return tpsBypass ? tps : NORMAL_TPS;
     }
 
+    // Game speed multiplier actually in effect.
+    float effectiveSpeed() const {
+        return speedHack ? speed : 1.0f;
+    }
+
     // True when something is on that makes a completion not count.
     bool cheatsActive() const {
-        return noclip || effectiveTps() != NORMAL_TPS;
+        return noclip || effectiveTps() != NORMAL_TPS || effectiveSpeed() != 1.0f;
     }
 
     void save() const {
@@ -50,6 +58,8 @@ struct Config {
         mod->setSavedValue<bool>("hitboxes", hitboxes);
         mod->setSavedValue<bool>("tps-bypass", tpsBypass);
         mod->setSavedValue<int>("tps", tps);
+        mod->setSavedValue<bool>("speed-hack", speedHack);
+        mod->setSavedValue<float>("speed", speed);
         mod->setSavedValue<bool>("tps-whole-game", tpsScheduler);
         mod->setSavedValue<int>("render-width", renderWidth);
         mod->setSavedValue<int>("render-height", renderHeight);
@@ -57,6 +67,7 @@ struct Config {
         mod->setSavedValue<int>("render-bitrate-mbps", bitrateMbps);
         mod->setSavedValue<std::string>("render-codec", codec);
         mod->setSavedValue<std::string>("render-name", renderName);
+        mod->setSavedValue<bool>("render-audio", renderAudio);
     }
 
 private:
@@ -69,6 +80,8 @@ private:
         c.hitboxes = mod->getSavedValue<bool>("hitboxes", c.hitboxes);
         c.tpsBypass = mod->getSavedValue<bool>("tps-bypass", c.tpsBypass);
         c.tps = mod->getSavedValue<int>("tps", c.tps);
+        c.speedHack = mod->getSavedValue<bool>("speed-hack", c.speedHack);
+        c.speed = mod->getSavedValue<float>("speed", c.speed);
         c.tpsScheduler = mod->getSavedValue<bool>("tps-whole-game", c.tpsScheduler);
         c.renderWidth = mod->getSavedValue<int>("render-width", c.renderWidth);
         c.renderHeight = mod->getSavedValue<int>("render-height", c.renderHeight);
@@ -76,6 +89,7 @@ private:
         c.bitrateMbps = mod->getSavedValue<int>("render-bitrate-mbps", c.bitrateMbps);
         c.codec = mod->getSavedValue<std::string>("render-codec", c.codec);
         c.renderName = mod->getSavedValue<std::string>("render-name", c.renderName);
+        c.renderAudio = mod->getSavedValue<bool>("render-audio", c.renderAudio);
         return c;
     }
 };
